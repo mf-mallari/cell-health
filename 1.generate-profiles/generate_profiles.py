@@ -7,8 +7,7 @@ Do not perform redundancy feature selection since downstream analysis uses model
 import os
 import pandas as pd
 
-from pycytominer.aggregate import AggregateProfiles
-from pycytominer import annotate, normalize, feature_select, audit
+from pycytominer import aggregate, feature_select, annotate, normalize
 
 
 def get_profiles(plate, backend_dir, metadata_dir, barcode_platemap_df):
@@ -29,7 +28,7 @@ def get_profiles(plate, backend_dir, metadata_dir, barcode_platemap_df):
     platemap_df = pd.read_csv(platemap_file)
 
     # Prepare sql file for processing
-    ap = AggregateProfiles(
+    ap = aggregate(
         sqlite_file, strata=["Image_Metadata_Plate", "Image_Metadata_Well"]
     )
 
