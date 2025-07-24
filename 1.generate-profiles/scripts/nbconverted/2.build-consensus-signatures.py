@@ -42,7 +42,7 @@ profile_dir = os.path.join("data", "profiles")
 all_profile_files = []
 for plate in os.listdir(profile_dir):
     plate_dir = os.path.join(profile_dir, plate)
-    
+
     if plate == '.DS_Store':
         continue
 
