@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Gregory Way 2019
+# Based on Gregory Way 2019
 # Predicting Cell Health
 # Pipeline to Process Data
 #
@@ -16,6 +16,10 @@ jupyter nbconvert --to=script \
 
 # Step 1: Use pycytominer to generate and process all single cell profiles
 python generate_profiles.py
+
+# Step 1.5: Clean and standardize profiles for feature consistency
+echo "Step 1.5: Running data cleaning to fix feature consistency..."
+python data_cleaning_fixes.py
 
 # Step 2: Process cell health assay data (these are the labels for training models)
 jupyter nbconvert --to=html \
@@ -34,14 +38,14 @@ jupyter nbconvert --to=html \
 # Step 4: Build consensus signatures for downstream processing
 jupyter nbconvert --to=html \
         --FilesWriter.build_directory=scripts/html \
-        --ExecutePreprocessor.kernel_name=python \
+        --ExecutePreprocessor.kernel_name=python3 \
         --ExecutePreprocessor.timeout=10000000 \
-        --execute 2.build-consensus-signatures.ipynb
+        --execute 2.build-consensus-signatures-fix.ipynb
 
 # Step 5: Build a supplementary table describing perturbations
 jupyter nbconvert --to=html \
         --FilesWriter.build_directory=scripts/html \
-        --ExecutePreprocessor.kernel_name=python \
+        --ExecutePreprocessor.kernel_name=python3 \
         --ExecutePreprocessor.timeout=10000000 \
         --execute 3.perturbation-table.ipynb
 
@@ -49,13 +53,27 @@ jupyter nbconvert --to=html \
 # Note: This step requires the raw image data!
 #jupyter nbconvert --to=html \
 #        --FilesWriter.build_directory=scripts/html \
-#        --ExecutePreprocessor.kernel_name=python \
+#        --ExecutePreprocessor.kernel_name=python3 \
 #        --ExecutePreprocessor.timeout=10000000 \
 #        --execute 4.load-example-cell-painting-image.ipynb
 
 # Step 7: Produce a summary of cell counts
 jupyter nbconvert --to=html \
         --FilesWriter.build_directory=scripts/html \
-        --ExecutePreprocessor.kernel_name=python \
+        --ExecutePreprocessor.kernel_name=python3 \
         --ExecutePreprocessor.timeout=10000000 \
         --execute 5.cell-count-summary.ipynb
+
+# Step 8: Generate cell health feature heatmaps (local visualization)
+jupyter nbconvert --to=html \
+        --FilesWriter.build_directory=scripts/html \
+        --ExecutePreprocessor.kernel_name=python3 \
+        --ExecutePreprocessor.timeout=10000000 \
+        --execute 6.visualize-cell-health-heatmap.ipynb
+
+echo "Pipeline complete!"
+echo ""
+echo "Visualization Options:"
+echo "   PDFs: figures/cell_health_feature_heatmap*.pdf"
+echo "   Shiny app: cd cell_health_heatmap_shiny && ./launch_app.sh"
+echo ""
