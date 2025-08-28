@@ -2,46 +2,118 @@ name: cell-health
 channels:
 - conda-forge
 dependencies:
-- conda-forge::python
-- conda-forge::pandas
-- conda-forge::xlrd
-- conda-forge::numpy
-- conda-forge::requests
+# ============================================================================
+# CORE PYTHON ENVIRONMENT
+# ============================================================================
+- conda-forge::python>=3.9,<4.0
+- conda-forge::pip
+
+# ============================================================================  
+# DATA SCIENCE CORE (Used across multiple notebooks)
+# ============================================================================
+- conda-forge::pandas=2.2.3
+- conda-forge::numpy=1.26.4
+- conda-forge::scipy
+- conda-forge::statsmodels
+
+# ============================================================================
+# MACHINE LEARNING STACK (1.train-models.ipynb, 0.stratify-data.ipynb, etc.)  
+# ============================================================================
 - conda-forge::scikit-learn
-- conda-forge::dask-ml
-- conda-forge::umap-learn
-- conda-forge::joblib
+- conda-forge::dask-ml  # For distributed ML (tested and confirmed needed)
+- conda-forge::joblib   # Model persistence (6.apply-models.ipynb)
+- conda-forge::umap-learn  # UMAP (10.crispr-umap.ipynb)
+
+# ============================================================================
+# VISUALIZATION & PLOTTING (Multiple notebooks)
+# ============================================================================
 - conda-forge::matplotlib
 - conda-forge::seaborn
-- conda-forge::plotnine
+- conda-forge::plotnine  #9.visualize-cells.ipynb
+
+# ============================================================================
+# IMAGE PROCESSING (4.load-example-cell-painting-image.ipynb, 9.visualize-cells.ipynb)
+# ============================================================================  
+- conda-forge::scikit-image  #Cell image visualization
+
+# ============================================================================
+# DATA I/O & FILE HANDLING (Multiple notebooks)
+# ============================================================================
+- conda-forge::openpyxl      # Excel files (0.process-labels.ipynb)
+- conda-forge::xlrd          # Legacy Excel support
+- conda-forge::requests      # HTTP requests
+
+# ============================================================================
+# JUPYTER ENVIRONMENT
+# ============================================================================
 - conda-forge::jupyter
 - conda-forge::ipykernel
 - conda-forge::nb_conda_kernels
 - conda-forge::jupyter_contrib_nbextensions
+
+# ============================================================================
+# R INTEGRATION & BASE R
+# ============================================================================
 - conda-forge::rpy2
-- conda-forge::simplegeneric
-- conda-forge::pip
 - conda-forge::r-base
+
+# ============================================================================
+# R CORE PACKAGES (Used across R notebooks)
+# ============================================================================
+- conda-forge::r-dplyr      # Data manipulation (all R notebooks)
+- conda-forge::r-ggplot2    # Plotting (all R notebooks)
+- conda-forge::r-readr      # Data reading (8.visualize-coefficients.ipynb)
+- conda-forge::r-tidyr      # Data tidying (8.visualize-coefficients.ipynb)
+- conda-forge::r-rlang      # Modern ggplot2 !!sym() syntax
+
+# ============================================================================
+# R VISUALIZATION PACKAGES (Multiple R notebooks)
+# ============================================================================
+- conda-forge::r-cowplot    # Plot arrangements (multiple notebooks)
+- conda-forge::r-ggrepel    # Label positioning (8.visualize-coefficients.ipynb) 
+- conda-forge::r-gridextra  # Grid arrangements (3.visualize-classification-performance.ipynb)
+- conda-forge::r-svglite    # SVG output
+
+# ============================================================================
+# R UTILITY PACKAGES  
+# ============================================================================
 - conda-forge::r-stringr
-- conda-forge::r-dplyr
-- conda-forge::r-tidyr
 - conda-forge::r-magrittr
 - conda-forge::r-tibble
-- conda-forge::r-docopt
 - conda-forge::r-purrr
-- conda-forge::r-readr
 - conda-forge::r-readxl
-- conda-forge::r-drc
-- conda-forge::r-ggplot2
-- conda-forge::r-cowplot
-- conda-forge::r-ggrepel
-- conda-forge::r-gridextra
-- conda-forge::r-svglite
-- conda-forge::r-irkernel
+- conda-forge::r-docopt
 - conda-forge::r-optparse
-- conda-forge::r-platetools
 - conda-forge::r-curl
 - conda-forge::r-futile.logger
 - conda-forge::r-knitr
+- conda-forge::r-irkernel
+- conda-forge::r-platetools
+
+# ============================================================================
+# R STATISTICAL & SPECIALIZED PACKAGES
+# ============================================================================  
+- conda-forge::r-drc        # Dose-response curves
+- conda-forge::r-reshape2   # Data reshaping (4.apply section)
+
+# ============================================================================
+# R SHINY PACKAGES (Interactive web applications - cell_health_heatmap_shiny/)
+# ============================================================================
+- conda-forge::r-shiny         # Core Shiny framework
+- conda-forge::r-shinydashboard # Dashboard layout
+- conda-forge::r-dt            # Interactive data tables (DT package)
+- conda-forge::r-plotly        # Interactive plots
+- conda-forge::r-shinywidgets  # Enhanced UI widgets
+- conda-forge::r-shinyjs       # JavaScript integration for dynamic UI
+- conda-forge::r-dqshiny       # Enhanced Shiny widgets (4.apply section)
+
+# ============================================================================
+# PYTHON PACKAGES VIA PIP (Not available on conda-forge or need git versions)
+# ============================================================================
 - pip:
-  - git+https://github.com/cytomining/pycytominer
+  # Cell Profiling (CRITICAL for all pycytominer functionality)
+  - git+https://github.com/cytomining/pycytominer  # Latest with SingleCells fixes
+  - cytominer-eval==0.1  # Model evaluation metrics
+  
+  # Plotting dependencies 
+  - mizani>=0.11.0  # plotnine dependency for scales/transformations
