@@ -85,55 +85,56 @@ filter_platemap = "C-7161-01-LM6-011"
 # In[7]:
 
 
-# Load data
-base_url = "https://media.githubusercontent.com/media/broadinstitute/lincs-cell-painting/"
-repurp_url = f"{base_url}/{commit_hash}/consensus/{batch}/{batch}_consensus_{consensus}.csv.gz"
-
-complete_consensus_df = pd.read_csv(repurp_url)
-
-print(complete_consensus_df.shape)
-complete_consensus_df.head()
+# Load transformed data for testing (fixes feature mismatch)transformed_file = "data/repurposing_transformed_features_fixed.tsv.gz"if os.path.exists(transformed_file):    print(f"📝 Using transformed data for testing: {transformed_file}")    complete_consensus_df = pd.read_csv(transformed_file, sep='\t')    print(f"  - Shape: {complete_consensus_df.shape}")    print(f"  - Features: {len([c for c in complete_consensus_df.columns if not c.startswith('Metadata_')])}")else:    print("❌ ERROR: Transformed data not found for testing!")    print("Please run: python transform_features.py")    raise FileNotFoundError("Test data not available")
 
 
-# In[8]:
+# In[ ]:
 
 
-# Apply feature selection to the consensus profiles
-feature_ops = [
-    "variance_threshold",
-    "drop_na_columns",
-    "blacklist",
-    "drop_outliers"
-]
-
-consensus_feature_select_df = feature_select(
-    complete_consensus_df,
-    operation=feature_ops,
-    na_cutoff=0
-)
-
-print(consensus_feature_select_df.shape)
-consensus_feature_select_df.head()
+# Apply feature selection to the consensus profiles (compatible with transformed data)feature_ops = [    "variance_threshold",    "drop_na_columns",    "blocklist",    "drop_outliers"]consensus_feature_select_df = feature_select(    complete_consensus_df,    operation=feature_ops,    na_cutoff=0)print(consensus_feature_select_df.shape)consensus_feature_select_df.head()# Split metadata and CP Features  # The training data has Image_ features, while LINCS data has Cells_, Nuclei_, Cytoplasm_ features# Get metadata featuresmeta_features = [c for c in complete_consensus_df.columns if c.startswith("Metadata_")]# Get training data features (non-metadata columns)training_features = [c for c in x_test_df.columns if not c.startswith("Metadata_") and c != "level_0"]# Get consensus features after feature selectionconsensus_features = [c for c in consensus_feature_select_df.columns if not c.startswith("Metadata_")]print(f"Training features: {len(training_features)}")print(f"Consensus features after selection: {len(consensus_features)}")# CRITICAL FIX: Find overlapping features between training and consensus dataoverlapping_features = [c for c in training_features if c in consensus_feature_select_df.columns]print(f"Overlapping features: {len(overlapping_features)}")# Use overlapping features if available, otherwise use all consensus features with warningif len(overlapping_features) > 10:  # Reasonable threshold    print(f"✅ Using {len(overlapping_features)} overlapping features")    feature_df = consensus_feature_select_df.loc[:, overlapping_features]else:    print(f"⚠️  WARNING: Only {len(overlapping_features)} overlapping features found.")    print("Using all consensus features - models may not work properly!")    feature_df = consensus_feature_select_df.loc[:, consensus_features]metadata_df = complete_consensus_df.loc[:, meta_features]print(f"Final feature matrix shape: {feature_df.shape}")print("Feature preview:")feature_df.head()
 
 
-# In[9]:
+# In[ ]:
 
 
-# Split metadata and CP Features
-cp_features = infer_cp_features(x_test_df)
-meta_features = infer_cp_features(complete_consensus_df, metadata=True)
+# Split metadata and CP Features  
+# The training data has Image_ features, while LINCS data has Cells_, Nuclei_, Cytoplasm_ features
 
-# Realign LINCS data to the same feature ordering as the test dataset
-feature_df = complete_consensus_df.reindex(cp_features, axis="columns")
+# Get metadata features
+meta_features = [c for c in complete_consensus_df.columns if c.startswith('Metadata_')]
+
+# Get training data features (non-metadata columns)
+training_features = [c for c in x_test_df.columns if not c.startswith('Metadata_') and c != 'level_0']
+
+# Get consensus features after feature selection
+consensus_features = [c for c in consensus_feature_select_df.columns if not c.startswith('Metadata_')]
+
+print(f"Training features: {len(training_features)}")
+print(f"Consensus features after selection: {len(consensus_features)}")
+
+# CRITICAL FIX: Find overlapping features between training and consensus data
+overlapping_features = [c for c in training_features if c in consensus_feature_select_df.columns]
+print(f"Overlapping features: {len(overlapping_features)}")
+
+# Use overlapping features if available, otherwise use all consensus features with warning
+if len(overlapping_features) > 10:  # Reasonable threshold
+    print(f"✅ Using {len(overlapping_features)} overlapping features")
+    feature_df = consensus_feature_select_df.loc[:, overlapping_features]
+else:
+    print(f"⚠️  WARNING: Only {len(overlapping_features)} overlapping features found.")
+    print("Using all consensus features - models may not work properly!")
+    feature_df = consensus_feature_select_df.loc[:, consensus_features]
+
 metadata_df = complete_consensus_df.loc[:, meta_features]
 
-print(feature_df.shape)
+print(f"Final feature matrix shape: {feature_df.shape}")
+print("Feature preview:")
 feature_df.head()
 
 
 # ## 3) Apply all Regression Models to all Repurposing Plates
 
-# In[10]:
+# In[ ]:
 
 
 cell_health_features = list(model_dict.keys())
@@ -147,7 +148,7 @@ for cell_health_feature in cell_health_features:
 
 # ## 4) Output Results
 
-# In[11]:
+# In[ ]:
 
 
 # Output scores
@@ -176,7 +177,7 @@ repurp_predict_df.head()
 # 
 # ### Part 1: Apply UMAP to Cell Health Transformed Repurposing Hub Features
 
-# In[12]:
+# In[ ]:
 
 
 reducer = umap.UMAP(random_state=1234, n_components=2)
@@ -209,41 +210,15 @@ predict_embedding_df.head()
 
 # ### Part 2: Apply UMAP to All Repurposing Hub Cell Painting Profiles
 
-# In[13]:
+# In[ ]:
 
 
-reducer = umap.UMAP(random_state=1234, n_components=2)
-
-repurp_embedding_df = pd.DataFrame(
-    reducer.fit_transform(
-        consensus_feature_select_df.loc[:, infer_cp_features(consensus_feature_select_df)]
-    ),
-    columns=["umap_x", "umap_y"]
-)
-
-repurp_embedding_df = (
-    metadata_df
-    .merge(
-        repurp_embedding_df,
-        left_index=True,
-        right_index=True
-    )
-    .query("Metadata_Plate_Map_Name != @filter_platemap")
-)
-
-output_real_file = os.path.join(
-    output_dir,
-    "repurposing_umap_transformed_cell_painting_{}.tsv.gz".format(consensus)
-)
-repurp_embedding_df.to_csv(output_real_file, sep="\t", index=False, compression="gzip")
-
-print(repurp_embedding_df.shape)
-repurp_embedding_df.head()
+reducer = umap.UMAP(random_state=1234, n_components=2)repurp_embedding_df = pd.DataFrame(    reducer.fit_transform(        consensus_feature_select_df.loc[:, [c for c in consensus_feature_select_df.columns if not c.startswith("Metadata_") and c != "level_0"]]    ),    columns=["umap_x", "umap_y"])repurp_embedding_df = (    metadata_df    .merge(        repurp_embedding_df,        left_index=True,        right_index=True    )    .query("Metadata_Plate_Map_Name != @filter_platemap"))output_real_file = os.path.join(    output_dir,    "repurposing_umap_transformed_cell_painting_{}.tsv.gz".format(consensus))repurp_embedding_df.to_csv(output_real_file, sep="\t", index=False, compression="gzip")print(repurp_embedding_df.shape)repurp_embedding_df.head()
 
 
 # ## Merge Data Together for Shiny App Exploration
 
-# In[14]:
+# In[ ]:
 
 
 # Load MOA file
@@ -256,7 +231,7 @@ print(moa_df.shape)
 moa_df.head(3)
 
 
-# In[15]:
+# In[ ]:
 
 
 core_id = [
@@ -284,7 +259,7 @@ print(repurp_embedding_with_pert_df.shape)
 repurp_embedding_with_pert_df.head()
 
 
-# In[16]:
+# In[ ]:
 
 
 shiny_merge_cols = [
@@ -310,7 +285,7 @@ print(shiny_df.shape)
 shiny_df.head()
 
 
-# In[17]:
+# In[ ]:
 
 
 shiny_file = os.path.join(
@@ -322,26 +297,21 @@ shiny_file = os.path.join(
 shiny_df.to_csv(shiny_file, sep='\t', index=False, compression="gzip")
 
 
-# In[18]:
+# In[ ]:
 
 
-shiny_combined_df = shiny_df.merge(
-    complete_consensus_df,
-    on=infer_cp_features(complete_consensus_df, metadata=True),
-    how="inner"
-)
+# Merge with transformed data compatibility# Use metadata columns for merging since feature structure has changedmetadata_cols = [c for c in complete_consensus_df.columns if c.startswith('Metadata_')]shiny_combined_df = shiny_df.merge(    complete_consensus_df[metadata_cols + ['level_0']],  # Include level_0 for compatibility    on=metadata_cols,    how="inner")
 
 
 # ## Output Correlation Matrix
 
-# In[19]:
+# In[ ]:
 
 
-shiny_features = infer_cp_features(consensus_feature_select_df)
-cell_health_features = [x for x in shiny_df if x.startswith("cell_health")]
+shiny_features = [c for c in consensus_feature_select_df.columns if not c.startswith("Metadata_") and c != "level_0"]cell_health_features = [x for x in shiny_df if x.startswith("cell_health")]
 
 
-# In[20]:
+# In[ ]:
 
 
 all_results = []
@@ -353,7 +323,7 @@ for cell_health_feature in cell_health_features:
         all_results.append([cell_health_feature, cp_feature, cor_result, pval])
 
 
-# In[21]:
+# In[ ]:
 
 
 # Output correlation matrix for cell health predictions and CellProfiler features
