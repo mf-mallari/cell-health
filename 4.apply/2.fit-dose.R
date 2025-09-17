@@ -108,6 +108,9 @@ for (model in all_models) {
       next
     }
 
+    # Initialize model_output_status
+    model_output_status <- "fail_convergence"
+    
     tryCatch(
       expr = {
         fit <- drc::drm(
